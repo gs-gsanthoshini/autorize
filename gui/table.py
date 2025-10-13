@@ -226,18 +226,18 @@ class TableModel(AbstractTableModel):
             return 0
 
     def getColumnCount(self):
-        return 8
+        return 9
 
     def getColumnName(self, columnIndex):
         data = ['ID','Method', 'URL', 'Orig. Len', 'Modif. Len', "Unauth. Len",
-                "Authz. Status", "Unauth. Status"]
+                "Authz. Status", "Unauth. Status", "Verb Bypasses"]
         try:
             return data[columnIndex]
         except IndexError:
             return ""
 
     def getColumnClass(self, columnIndex):
-        data = [Integer, String, String, Integer, Integer, Integer, String, String]
+        data = [Integer, String, String, Integer, Integer, Integer, String, String, String]
         try:
             return data[columnIndex]
         except IndexError:
@@ -266,7 +266,12 @@ class TableModel(AbstractTableModel):
         if columnIndex == 6:
             return logEntry._enfocementStatus   
         if columnIndex == 7:
-            return logEntry._enfocementStatusUnauthorized        
+            return logEntry._enfocementStatusUnauthorized
+        if columnIndex == 8:
+            if hasattr(logEntry, '_verbBypasses'):
+                return logEntry._verbBypasses
+            else:
+                return "Testing..."
         return ""
 
 class TableSelectionListener(ListSelectionListener):
@@ -301,6 +306,17 @@ class Table(JTable):
                 comp.setForeground(Color.BLACK)
             elif value == self._extender.ENFORCED_STR:
                 comp.setBackground(Color(204, 255, 153))
+                comp.setForeground(Color.BLACK)
+        elif col == 8:
+            # Color code Verb Bypasses column
+            if value and value.startswith("🚨"):
+                comp.setBackground(Color(255, 100, 100))
+                comp.setForeground(Color.WHITE)
+            elif value == "None":
+                comp.setBackground(Color(200, 255, 200))
+                comp.setForeground(Color.BLACK)
+            else:
+                comp.setBackground(Color(255, 255, 200))
                 comp.setForeground(Color.BLACK)
         else:
             comp.setForeground(Color.BLACK)
@@ -351,15 +367,16 @@ class Table(JTable):
         return
 
 class LogEntry:
-    def __init__(self, id, requestResponse, method, url, originalrequestResponse, enforcementStatus, unauthorizedRequestResponse, enforcementStatusUnauthorized):
+    def __init__(self, id, requestResponse, method, url, originalrequestResponse, enforcementStatus, unauthorizedRequestResponse, enforcementStatusUnauthorized, verbBypasses="Testing..."):
         self._id = id
         self._requestResponse = requestResponse
         self._originalrequestResponse = originalrequestResponse
         self._method = method
         self._url = url
-        self._enfocementStatus =  enforcementStatus
+        self._enfocementStatus = enforcementStatus
         self._unauthorizedRequestResponse = unauthorizedRequestResponse
-        self._enfocementStatusUnauthorized =  enforcementStatusUnauthorized
+        self._enfocementStatusUnauthorized = enforcementStatusUnauthorized
+        self._verbBypasses = verbBypasses
         return
 
 class Mouseclick(MouseAdapter):
@@ -408,4 +425,3 @@ class UpdateTableEDT(Runnable):
             self._extender.tableModel.fireTableRowsDeleted(self._firstRow, self._lastRow)
         else:
             print("Invalid action in UpdateTableEDT")
-
