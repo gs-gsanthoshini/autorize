@@ -317,13 +317,21 @@ def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
     method = self._helpers.analyzeRequest(messageInfo.getRequest()).getMethod()
 
     if checkUnauthorized:
-        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,self._callbacks.saveBuffersToTempFiles(requestResponseUnauthorized),impressionUnauthorized)) # same requests not include again.
+        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,self._callbacks.saveBuffersToTempFiles(requestResponseUnauthorized),impressionUnauthorized))
     else:
-        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,None,"Disabled")) # same requests not include again.
+        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,None,"Disabled"))
 
     SwingUtilities.invokeLater(UpdateTableEDT(self,"insert",row,row))
     self.currentRequestNumber = self.currentRequestNumber + 1
+    
+    # Get the log entry for verb swap testing
+    currentLogEntry = self._log.get(row)
+    
     self._lock.release()
+    
+    # Trigger automatic verb swap testing if enabled
+    from thread import start_new_thread
+    start_new_thread(auto_verb_swap_test, (self, currentLogEntry, messageInfo, originalHeaders))
 
 def checkAuthorizationV2(self, messageInfo):
     checkAuthorization(self, messageInfo, self._extender._helpers.analyzeResponse(messageInfo.getResponse()).getHeaders(), self._extender.doUnauthorizedRequest.isSelected())
@@ -333,3 +341,120 @@ def retestAllRequests(self):
     for i in range(self.tableModel.getRowCount()):
         logEntry = self._log.get(self.logTable.convertRowIndexToModel(i))
         handle_message(self, "AUTORIZE", False, logEntry._originalrequestResponse)
+
+def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
+    """
+    Automatically test all selected HTTP verbs when Auto Verb Swap is enabled
+    """
+    if not hasattr(self, 'autoVerbSwapEnabled') or not self.autoVerbSwapEnabled:
+        logEntry._verbBypasses = "None"
+        try:
+            row_index = self._log.indexOf(logEntry)
+            SwingUtilities.invokeLater(UpdateTableEDT(self, "update", row_index, row_index))
+        except:
+            pass
+        return
+    
+    from helpers.verb_swap import swap_http_verb, get_verb_from_request
+    from helpers.http import makeRequest
+    from java.lang import Runnable
+    
+    # Get selected verbs to test
+    selected_verbs = []
+    if hasattr(self, 'testGET') and self.testGET.isSelected():
+        selected_verbs.append('GET')
+    if hasattr(self, 'testPOST') and self.testPOST.isSelected():
+        selected_verbs.append('POST')
+    if hasattr(self, 'testPUT') and self.testPUT.isSelected():
+        selected_verbs.append('PUT')
+    if hasattr(self, 'testDELETE') and self.testDELETE.isSelected():
+        selected_verbs.append('DELETE')
+    if hasattr(self, 'testPATCH') and self.testPATCH.isSelected():
+        selected_verbs.append('PATCH')
+    
+    if len(selected_verbs) == 0:
+        logEntry._verbBypasses = "None"
+        try:
+            row_index = self._log.indexOf(logEntry)
+            SwingUtilities.invokeLater(UpdateTableEDT(self, "update", row_index, row_index))
+        except:
+            pass
+        return
+    
+    # Get current verb
+    originalRequest = messageInfo.getRequest()
+    currentVerb = get_verb_from_request(self._helpers, originalRequest)
+    
+    # Test each verb and collect bypasses
+    bypassed_verbs = []
+    tested_count = 0
+    
+    for new_verb in selected_verbs:
+        if new_verb == currentVerb:
+            continue
+        
+        try:
+            swappedRequest = swap_http_verb(self._helpers, originalRequest, new_verb)
+            requestResponse = makeRequest(self, messageInfo, swappedRequest)
+            tested_count += 1
+            
+            if requestResponse.getResponse() is not None:
+                analyzedResponse = self._helpers.analyzeResponse(requestResponse.getResponse())
+                statusCode = analyzedResponse.getHeaders()[0]
+                
+                # Check for successful responses (200, 201, 202, etc.)
+                if "200" in statusCode or "201" in statusCode or "202" in statusCode:
+                    bypassed_verbs.append(new_verb)
+                    if hasattr(self, 'verbSwapStats'):
+                        self.verbSwapStats['bypasses_found'] += 1
+                        self.verbSwapStats['status_200'] += 1
+                        self.verbSwapStats['total_tested'] += 1
+                elif "403" in statusCode:
+                    if hasattr(self, 'verbSwapStats'):
+                        self.verbSwapStats['status_403'] += 1
+                        self.verbSwapStats['total_tested'] += 1
+                elif "401" in statusCode:
+                    if hasattr(self, 'verbSwapStats'):
+                        self.verbSwapStats['status_401'] += 1
+                        self.verbSwapStats['total_tested'] += 1
+                elif "500" in statusCode:
+                    if hasattr(self, 'verbSwapStats'):
+                        self.verbSwapStats['status_500'] += 1
+                        self.verbSwapStats['total_tested'] += 1
+                else:
+                    if hasattr(self, 'verbSwapStats'):
+                        self.verbSwapStats['status_other'] += 1
+                        self.verbSwapStats['total_tested'] += 1
+        except Exception as e:
+            print("Verb swap test error for " + new_verb + ": " + str(e))
+    
+    # Update the log entry
+    if len(bypassed_verbs) > 0:
+        logEntry._verbBypasses = "🚨 " + ", ".join(bypassed_verbs)
+    else:
+        if tested_count > 0:
+            logEntry._verbBypasses = "None"
+        else:
+            logEntry._verbBypasses = "Not tested"
+    
+    # Update table display
+    try:
+        row_index = self._log.indexOf(logEntry)
+        SwingUtilities.invokeLater(UpdateTableEDT(self, "update", row_index, row_index))
+    except:
+        pass
+    
+    # Update statistics display
+    if hasattr(self, 'verbSwapStatsArea'):
+        from gui.verb_swap_panel import VerbSwapPanel
+        panel = VerbSwapPanel(self)
+        
+        class UpdateStatsRunnable(Runnable):
+            def __init__(self, extender, panel):
+                self._extender = extender
+                self._panel = panel
+            
+            def run(self):
+                self._panel.updateStatsDisplay()
+        
+        SwingUtilities.invokeLater(UpdateStatsRunnable(self, panel))
