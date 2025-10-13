@@ -95,6 +95,7 @@ class ConfigurationTab():
         self._extender.filtersTabs.addTab("Match/Replace", self._extender.MRPnl)
         self._extender.filtersTabs.addTab("Table Filter", self._extender.filterPnl)
         self._extender.filtersTabs.addTab("Save/Restore", self._extender.exportPnl)
+        self._extender.filtersTabs.addTab("Verb Swap", self._extender.verbSwapPnl)
 
         self._extender.filtersTabs.setSelectedIndex(2)
         self._extender.filtersTabs.setBounds(0, 350, 2000, 700)
@@ -383,4 +384,3 @@ class SavedHeaderChange(ActionListener):
         selectedTitle = self._extender.savedHeadersTitlesCombo.getSelectedItem()
         headers = [x for x in self._extender.savedHeaders if x['title'] == selectedTitle]
         self._extender.replaceString.setText(headers[0]['headers'])
-
