@@ -1,112 +1,121 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*- 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
 
-"""
-Verb Swap GUI Component
-Provides UI controls for HTTP verb swapping functionality
-"""
+public class VerbSwapPanel extends JPanel {
+    private JCheckBox autoVerbSwapCheckbox;
+    private JCheckBox[] methodCheckboxes;
+    private JButton testAllRequestsButton;
+    private JButton clearResultsButton;
+    private JTextArea resultsArea;
+    private JLabel statusLabel;
+    private JPanel statsPanel;
+    private VerbSwapStats verbSwapStats;
 
-from javax.swing import JButton
-from javax.swing import JComboBox
-from javax.swing import JLabel
-from javax.swing import JPanel
-from javax.swing import GroupLayout
-from java.awt.event import ActionListener
-from java.awt.event import ItemListener
+    public VerbSwapPanel() {
+        setLayout(null);
+        initializeComponents();
+        initializeEventListeners();
+    }
 
-from helpers.verb_swap import get_verb_mappings, swap_http_verb, get_verb_from_request
-from authorization.authorization import checkAuthorization
-from helpers.http import IHttpRequestResponseImplementation
+    private void initializeComponents() {
+        // Initialize components
+        autoVerbSwapCheckbox = new JCheckBox("Auto Verb Swap");
+        autoVerbSwapCheckbox.setBounds(10, 10, 150, 30);
 
-class VerbSwapPanel():
-    def __init__(self, extender):
-        self._extender = extender
+        String[] httpMethods = {"GET", "POST", "PUT", "DELETE", "PATCH"};
+        methodCheckboxes = new JCheckBox[httpMethods.length];
+        for (int i = 0; i < httpMethods.length; i++) {
+            methodCheckboxes[i] = new JCheckBox(httpMethods[i]);
+            methodCheckboxes[i].setBounds(10, 50 + (i * 30), 100, 30);
+            add(methodCheckboxes[i]);
+        }
 
-    def draw(self):
-        """
-        Initialize verb swap UI panel
-        """
-        verbSwapLabel = JLabel("Verb Swap:")
-        verbSwapLabel.setBounds(10, 10, 100, 30)
+        testAllRequestsButton = new JButton("Test All Requests with All Verbs");
+        testAllRequestsButton.setBounds(10, 200, 250, 30);
 
-        # Create dropdown with verb mappings
-        verb_mappings = get_verb_mappings()
-        mapping_strings = ["%s → %s" % (old, new) for old, new in verb_mappings]
-        self._extender.verbSwapDropdown = JComboBox(mapping_strings)
-        self._extender.verbSwapDropdown.setBounds(10, 35, 150, 30)
+        clearResultsButton = new JButton("Clear Verb Swap Results");
+        clearResultsButton.setBounds(10, 240, 250, 30);
 
-        # Create swap button
-        self._extender.verbSwapButton = JButton("Swap Verb & Test")
-        self._extender.verbSwapButton.setBounds(165, 35, 150, 30)
-        self._extender.verbSwapButton.setEnabled(False)  # Initially disabled
-        self._extender.verbSwapButton.addActionListener(VerbSwapAction(self._extender))
+        resultsArea = new JTextArea();
+        JScrollPane scrollPane = new JScrollPane(resultsArea);
+        scrollPane.setBounds(10, 280, 400, 200);
 
-        # Info label
-        infoLabel = JLabel("Select a request in the table to enable verb swapping")
-        infoLabel.setBounds(10, 70, 400, 30)
+        statusLabel = new JLabel("Status: ");
+        statusLabel.setBounds(10, 490, 400, 30);
 
-        self._extender.verbSwapPnl = JPanel()
-        self._extender.verbSwapPnl.setLayout(None)
-        self._extender.verbSwapPnl.add(verbSwapLabel)
-        self._extender.verbSwapPnl.add(self._extender.verbSwapDropdown)
-        self._extender.verbSwapPnl.add(self._extender.verbSwapButton)
-        self._extender.verbSwapPnl.add(infoLabel)
+        statsPanel = new JPanel();
+        statsPanel.setLayout(new GridLayout(6, 2));
+        statsPanel.setBounds(420, 10, 300, 300);
+        add(statsPanel);
 
-        return self._extender.verbSwapPnl
+        add(autoVerbSwapCheckbox);
+        add(testAllRequestsButton);
+        add(clearResultsButton);
+        add(scrollPane);
+        add(statusLabel);
+    }
 
+    private void initializeEventListeners() {
+        autoVerbSwapCheckbox.addItemListener(new AutoVerbSwapToggle());
+        testAllRequestsButton.addActionListener(new TestAllVerbsAction());
+        clearResultsButton.addActionListener(new ClearVerbSwapAction());
+    }
 
-class VerbSwapAction(ActionListener):
-    """
-    Action listener for the Verb Swap button
-    """
-    def __init__(self, extender):
-        self._extender = extender
+    private class AutoVerbSwapToggle implements ItemListener {
+        @Override
+        public void itemStateChanged(ItemEvent e) {
+            // Enable/disable automatic testing
+        }
+    }
 
-    def actionPerformed(self, event):
-        """
-        Handle verb swap button click
-        """
-        selectedRows = self._extender.logTable.getSelectedRows()
-        
-        if len(selectedRows) == 0:
-            return  # No request selected
-        
-        # Get selected mapping from dropdown
-        mapping = self._extender.verbSwapDropdown.getSelectedItem()
-        parts = mapping.split(" → ")
-        if len(parts) != 2:
-            return
-        
-        old_verb = parts[0].strip()
-        new_verb = parts[1].strip()
-        
-        # Process each selected request
-        for row in selectedRows:
-            modelRow = self._extender.logTable.convertRowIndexToModel(row)
-            logEntry = self._extender._log.get(modelRow)
-            
-            # Get the original request
-            originalRequest = logEntry._originalrequestResponse.getRequest()
-            currentVerb = get_verb_from_request(self._extender._helpers, originalRequest)
-            
-            # Check if the current verb matches the selected old verb
-            if currentVerb == old_verb:
-                # Swap the verb
-                swappedRequest = swap_http_verb(
-                    self._extender._helpers, 
-                    originalRequest, 
-                    new_verb
-                )
-                
-                # Create new request response with swapped verb
-                httpService = logEntry._originalrequestResponse.getHttpService()
-                newRequestResponse = IHttpRequestResponseImplementation(
-                    httpService, 
-                    swappedRequest, 
-                    None
-                )
-                
-                # Send through Autorize for testing
-                from authorization.authorization import send_request_to_autorize
-                from thread import start_new_thread
-                start_new_thread(send_request_to_autorize, (self._extender, newRequestResponse,))
+    private class TestAllVerbsAction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            // Batch test all requests with selected HTTP methods
+        }
+    }
+
+    private class ClearVerbSwapAction implements ActionListener {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            // Reset statistics
+            verbSwapStats = new VerbSwapStats();
+            updateStatsDisplay();
+        }
+    }
+
+    private void updateStatsDisplay() {
+        // Refresh statistics display
+        statsPanel.removeAll();
+        statsPanel.add(new JLabel("Total Tested: " + verbSwapStats.total_tested));
+        statsPanel.add(new JLabel("Bypasses Found: " + verbSwapStats.bypasses_found));
+        statsPanel.add(new JLabel("Status 200: " + verbSwapStats.status_200));
+        statsPanel.add(new JLabel("Status 403: " + verbSwapStats.status_403));
+        statsPanel.add(new JLabel("Status 401: " + verbSwapStats.status_401));
+        statsPanel.add(new JLabel("Status 500: " + verbSwapStats.status_500));
+        statsPanel.add(new JLabel("Status Other: " + verbSwapStats.status_other));
+        statsPanel.revalidate();
+        statsPanel.repaint();
+    }
+
+    private class VerbSwapStats {
+        int total_tested;
+        int bypasses_found;
+        int status_200;
+        int status_403;
+        int status_401;
+        int status_500;
+        int status_other;
+
+        public VerbSwapStats() {
+            total_tested = 0;
+            bypasses_found = 0;
+            status_200 = 0;
+            status_403 = 0;
+            status_401 = 0;
+            status_500 = 0;
+            status_other = 0;
+        }
+    }
+}
