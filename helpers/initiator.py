@@ -9,6 +9,7 @@ from gui.tabs import Tabs, ITabImpl
 from gui.table import TableFilter
 from gui.export import Export
 from gui.menu import MenuImpl
+from gui.verb_swap_panel import VerbSwapPanel
 
 from java.util import ArrayList
 from threading import Lock
@@ -50,6 +51,10 @@ class Initiator():
 
         table_filter = TableFilter(self._extender)
         table_filter.draw()
+        
+        # Initialize Verb Swap Panel
+        verb_swap_panel = VerbSwapPanel(self._extender)
+        verb_swap_panel.draw()
 
         cfg_tab = ConfigurationTab(self._extender)
         cfg_tab.draw()
@@ -73,6 +78,7 @@ class Initiator():
         self._extender._callbacks.customizeUiComponent(self._extender.scrollPane)
         self._extender._callbacks.customizeUiComponent(self._extender.tabs)
         self._extender._callbacks.customizeUiComponent(self._extender.filtersTabs)
+        self._extender._callbacks.customizeUiComponent(self._extender.verbSwapPnl)
 
     def print_welcome_message(self):
         print("""Thank you for installing Autorize v{} extension
