@@ -15,6 +15,7 @@ from gui.table import LogEntry, UpdateTableEDT
 from javax.swing import SwingUtilities
 from java.net import URL
 import re
+import time
 
 def tool_needs_to_be_ignored(self, toolFlag):
     for i in range(0, self.IFList.getModel().getSize()):
@@ -324,14 +325,26 @@ def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
     SwingUtilities.invokeLater(UpdateTableEDT(self,"insert",row,row))
     self.currentRequestNumber = self.currentRequestNumber + 1
     
-    # Get the log entry for verb swap testing
-    currentLogEntry = self._log.get(row)
-    
+    # Release lock BEFORE starting background thread (prevents deadlock)
     self._lock.release()
     
-    # Trigger automatic verb swap testing if enabled
-    from thread import start_new_thread
-    start_new_thread(auto_verb_swap_test, (self, currentLogEntry, messageInfo, originalHeaders))
+    # Trigger automatic verb swap testing if enabled (safe threading)
+    try:
+        from thread import start_new_thread
+        
+        def delayed_verb_swap_test():
+            # Small delay to let main thread complete
+            time.sleep(0.1)
+            # Get log entry inside thread (safer)
+            try:
+                currentLogEntry = self._log.get(row)
+                auto_verb_swap_test(self, currentLogEntry, messageInfo, originalHeaders)
+            except Exception as e:
+                print("[Verb Swap] Error in background thread: " + str(e))
+        
+        start_new_thread(delayed_verb_swap_test, ())
+    except Exception as e:
+        print("[Verb Swap] Error starting background thread: " + str(e))
 
 def checkAuthorizationV2(self, messageInfo):
     checkAuthorization(self, messageInfo, self._extender._helpers.analyzeResponse(messageInfo.getResponse()).getHeaders(), self._extender.doUnauthorizedRequest.isSelected())
@@ -345,7 +358,7 @@ def retestAllRequests(self):
 def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
     """
     Automatically test all selected HTTP verbs when Auto Verb Swap is enabled
-    IMPROVED VERSION with detailed error logging
+    SAFE VERSION with detailed logging and no deadlocks
     """
     print("[Verb Swap] Starting test for request ID: " + str(logEntry._id))
     
@@ -496,7 +509,7 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
             logEntry._verbBypasses = "Not tested"
             print("[Verb Swap] RESULT: Not tested (no verbs to test)")
     
-    # Update table display
+    # Update table display (safely)
     try:
         row_index = self._log.indexOf(logEntry)
         SwingUtilities.invokeLater(UpdateTableEDT(self, "update", row_index, row_index))
@@ -523,4 +536,4 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
         except Exception as e:
             print("[Verb Swap] Error updating statistics: " + str(e))
     
-    print("[Verb Swap] Test completed for request ID: " + str(logEntry._id))
+    print("[Verb Swap] Test completed for request ID: " + str(log Entry._id))
