@@ -285,7 +285,6 @@ def checkBypass(self, oldStatusCode, newStatusCode, oldContent,
         return self.ENFORCED_STR
 
 def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
-    # Check unauthorized request
     if checkUnauthorized:
         messageUnauthorized = makeMessage(self, messageInfo, True, False)
         requestResponseUnauthorized = makeRequest(self, messageInfo, messageUnauthorized)
@@ -325,17 +324,13 @@ def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
     SwingUtilities.invokeLater(UpdateTableEDT(self,"insert",row,row))
     self.currentRequestNumber = self.currentRequestNumber + 1
     
-    # Release lock BEFORE starting background thread (prevents deadlock)
     self._lock.release()
     
-    # Trigger automatic verb swap testing if enabled (safe threading)
     try:
         from thread import start_new_thread
         
         def delayed_verb_swap_test():
-            # Small delay to let main thread complete
             time.sleep(0.1)
-            # Get log entry inside thread (safer)
             try:
                 currentLogEntry = self._log.get(row)
                 auto_verb_swap_test(self, currentLogEntry, messageInfo, originalHeaders)
@@ -356,13 +351,8 @@ def retestAllRequests(self):
         handle_message(self, "AUTORIZE", False, logEntry._originalrequestResponse)
 
 def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
-    """
-    Automatically test all selected HTTP verbs when Auto Verb Swap is enabled
-    SAFE VERSION with detailed logging and no deadlocks
-    """
     print("[Verb Swap] Starting test for request ID: " + str(logEntry._id))
     
-    # Check if Auto Verb Swap is enabled
     if not hasattr(self, 'autoVerbSwapEnabled'):
         print("[Verb Swap] autoVerbSwapEnabled attribute does not exist!")
         logEntry._verbBypasses = "None"
@@ -400,7 +390,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
         logEntry._verbBypasses = "Error: Import failed"
         return
     
-    # Get selected verbs to test
     selected_verbs = []
     if hasattr(self, 'testGET') and self.testGET.isSelected():
         selected_verbs.append('GET')
@@ -425,7 +414,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
             pass
         return
     
-    # Get current verb
     try:
         originalRequest = messageInfo.getRequest()
         currentVerb = get_verb_from_request(self._helpers, originalRequest)
@@ -440,7 +428,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
         logEntry._verbBypasses = "Error: Cannot get verb"
         return
     
-    # Test each verb and collect bypasses
     bypassed_verbs = []
     tested_count = 0
     
@@ -461,7 +448,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
                 statusCode = analyzedResponse.getHeaders()[0]
                 print("[Verb Swap] " + new_verb + " returned: " + statusCode)
                 
-                # Check for successful responses (200, 201, 202, etc.)
                 if "200" in statusCode or "201" in statusCode or "202" in statusCode:
                     bypassed_verbs.append(new_verb)
                     print("[Verb Swap] BYPASS FOUND with " + new_verb + "!")
@@ -497,7 +483,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
             traceback.print_exc()
             print("=" * 60)
     
-    # Update the log entry
     if len(bypassed_verbs) > 0:
         logEntry._verbBypasses = "🚨 " + ", ".join(bypassed_verbs)
         print("[Verb Swap] RESULT: Bypasses found - " + ", ".join(bypassed_verbs))
@@ -509,7 +494,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
             logEntry._verbBypasses = "Not tested"
             print("[Verb Swap] RESULT: Not tested (no verbs to test)")
     
-    # Update table display (safely)
     try:
         row_index = self._log.indexOf(logEntry)
         SwingUtilities.invokeLater(UpdateTableEDT(self, "update", row_index, row_index))
@@ -517,7 +501,6 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
     except Exception as e:
         print("[Verb Swap] Error updating table: " + str(e))
     
-    # Update statistics display
     if hasattr(self, 'verbSwapStatsArea'):
         try:
             from gui.verb_swap_panel import VerbSwapPanel
@@ -536,4 +519,4 @@ def auto_verb_swap_test(self, logEntry, messageInfo, originalHeaders):
         except Exception as e:
             print("[Verb Swap] Error updating statistics: " + str(e))
     
-    print("[Verb Swap] Test completed for request ID: " + str(log Entry._id))
+    print("[Verb Swap] Test completed for request ID: " + str(logEntry._id))
