@@ -308,7 +308,6 @@ class ClearVerbSwapAction(ActionListener):
         }
         
         # Update display
-        stats = self._extender.verbSwapStats
         statsText = """
 Total Verb Tests:          0
 Bypasses Found:            0  (0.0%)
@@ -324,6 +323,5 @@ Note: Statistics count EVERY verb test, not just bypasses.
 Check Output tab for detailed logs of each test!
 """
         self._extender.verbSwapStatsArea.setText(statsText)
-        self._extender.verbSwapStatusLabel.setText("Status: Statistics cleared")
-        
-        print("[Verb Swap] Statistics cleared successfully")
+        self._extender.verbSwapStatus*
+
