@@ -3,7 +3,7 @@
 
 """
 Enhanced Verb Swap GUI Component with Automatic Testing
-Provides UI controls for automatic HTTP verb swapping functionality
+IMPROVED VERSION with better statistics and messaging
 """
 
 from javax.swing import JButton
@@ -39,9 +39,9 @@ class VerbSwapPanel():
         """
         Initialize enhanced verb swap UI panel with automatic testing
         """
-        # Title
-        titleLabel = JLabel("<html><b>Automatic Verb Swap Configuration</b></html>")
-        titleLabel.setBounds(10, 10, 400, 30)
+        # Title - IMPROVED VERSION
+        titleLabel = JLabel("<html><b>Automatic Verb Swap Configuration (IMPROVED)</b></html>")
+        titleLabel.setBounds(10, 10, 500, 30)
 
         # Auto Verb Swap Checkbox
         self._extender.autoVerbSwapCheckbox = JCheckBox("Auto Verb Swap (Test all methods automatically)")
@@ -83,8 +83,8 @@ class VerbSwapPanel():
         self._extender.clearVerbSwapButton.setBounds(270, 160, 220, 35)
         self._extender.clearVerbSwapButton.addActionListener(ClearVerbSwapAction(self._extender))
 
-        # Status Label
-        self._extender.verbSwapStatusLabel = JLabel("Status: Ready")
+        # Status Label - IMPROVED VERSION
+        self._extender.verbSwapStatusLabel = JLabel("Status: Ready (Analytics auto-filtered)")
         self._extender.verbSwapStatusLabel.setBounds(10, 205, 600, 30)
 
         # Statistics Panel
@@ -100,24 +100,26 @@ class VerbSwapPanel():
         scrollStats = JScrollPane(self._extender.verbSwapStatsArea)
         scrollStats.setBounds(10, 275, 600, 150)
 
-        # Instructions
+        # Instructions - IMPROVED VERSION
         instructionsArea = JTextArea(
-            "How to use:\n" +
-            "1. Enable 'Auto Verb Swap' to automatically test all HTTP methods for every captured request\n" +
-            "2. Select which HTTP methods you want to test (GET, POST, PUT, DELETE, PATCH)\n" +
-            "3. Or click 'Test All Requests' to batch test all existing requests in the table\n" +
-            "4. Results appear in the main Autorize table with color-coded status\n" +
-            "5. Check statistics above to see bypasses found and status codes"
+            "IMPROVED VERSION Features:\n" +
+            "1. Enable 'Auto Verb Swap' to automatically test all HTTP methods\n" +
+            "2. Analytics domains (bam.nr-data, aptrinsic, gainsight, etc.) are AUTO-SKIPPED\n" +
+            "3. Detailed console logging in Output tab shows exactly what's being tested\n" +
+            "4. Statistics now count ALL tests (not just bypasses)\n" +
+            "5. Progress indicators show Testing (1/4)... → Testing (2/4)... etc.\n" +
+            "6. Results in main table: Red = Bypass found, Green = Secure, Yellow = Skipped\n\n" +
+            "Check the Output tab (Extender → Extensions → Autorize → Output) to see detailed logs!"
         )
         instructionsArea.setEditable(False)
         instructionsArea.setWrapStyleWord(True)
         instructionsArea.setLineWrap(True)
         instructionsArea.setBackground(Color(245, 245, 245))
-        instructionsArea.setBounds(10, 435, 600, 100)
+        instructionsArea.setBounds(10, 435, 600, 120)
         instructionsArea.setBorder(BorderFactory.createLineBorder(Color.GRAY))
 
         scrollInstructions = JScrollPane(instructionsArea)
-        scrollInstructions.setBounds(10, 435, 600, 100)
+        scrollInstructions.setBounds(10, 435, 600, 120)
 
         # Create Panel
         self._extender.verbSwapPnl = JPanel()
@@ -140,11 +142,18 @@ class VerbSwapPanel():
         return self._extender.verbSwapPnl
 
     def updateStatsDisplay(self):
-        """Update the statistics display"""
+        """Update the statistics display - IMPROVED VERSION"""
         stats = self._extender.verbSwapStats
+        
+        # Calculate percentage if tests were run
+        if stats['total_tested'] > 0:
+            bypass_percentage = (float(stats['bypasses_found']) / float(stats['total_tested'])) * 100
+        else:
+            bypass_percentage = 0.0
+        
         statsText = """
-Total Requests Tested:     %d
-Bypasses Found:            %d
+Total Verb Tests:          %d
+Bypasses Found:            %d  (%.1f%%)
         
 Status Code Breakdown:
   200 OK:                  %d
@@ -152,9 +161,13 @@ Status Code Breakdown:
   401 Unauthorized:        %d
   500 Server Error:        %d
   Other:                   %d
+
+Note: Statistics count EVERY verb test, not just bypasses.
+Check Output tab for detailed logs of each test!
 """ % (
             stats['total_tested'],
             stats['bypasses_found'],
+            bypass_percentage,
             stats['status_200'],
             stats['status_403'],
             stats['status_401'],
@@ -172,9 +185,16 @@ class AutoVerbSwapToggle(ItemListener):
     def itemStateChanged(self, e):
         self._extender.autoVerbSwapEnabled = self._extender.autoVerbSwapCheckbox.isSelected()
         if self._extender.autoVerbSwapEnabled:
-            self._extender.verbSwapStatusLabel.setText("Status: Auto Verb Swap ENABLED - All new requests will be tested automatically")
+            self._extender.verbSwapStatusLabel.setText("Status: Auto Verb Swap ENABLED - Analytics auto-filtered, check Output tab for logs")
+            print("[Verb Swap] ============================================================")
+            print("[Verb Swap] AUTO VERB SWAP ENABLED")
+            print("[Verb Swap] All new requests will be automatically tested")
+            print("[Verb Swap] Analytics domains will be automatically skipped")
+            print("[Verb Swap] Watch this Output tab for detailed test logs")
+            print("[Verb Swap] ============================================================")
         else:
             self._extender.verbSwapStatusLabel.setText("Status: Auto Verb Swap DISABLED")
+            print("[Verb Swap] Auto Verb Swap DISABLED")
 
 
 class TestAllVerbsAction(ActionListener):
@@ -186,6 +206,10 @@ class TestAllVerbsAction(ActionListener):
         start_new_thread(self.testAllRequests, ())
 
     def testAllRequests(self):
+        print("[Verb Swap] ============================================================")
+        print("[Verb Swap] BATCH TESTING ALL REQUESTS")
+        print("[Verb Swap] ============================================================")
+        
         self._extender.verbSwapStatusLabel.setText("Status: Testing all requests with all verbs...")
         
         # Get selected verbs
@@ -202,39 +226,67 @@ class TestAllVerbsAction(ActionListener):
             selected_verbs.append('PATCH')
 
         if len(selected_verbs) == 0:
+            print("[Verb Swap] ERROR: No HTTP methods selected!")
             self._extender.verbSwapStatusLabel.setText("Status: Error - No HTTP methods selected!")
             return
+
+        print("[Verb Swap] Selected methods: " + str(selected_verbs))
 
         # Test all requests
         total_requests = self._extender._log.size()
         tested_count = 0
+        skipped_count = 0
+
+        print("[Verb Swap] Total requests in table: " + str(total_requests))
 
         for i in range(total_requests):
             logEntry = self._extender._log.get(i)
             originalRequest = logEntry._originalrequestResponse.getRequest()
             currentVerb = get_verb_from_request(self._extender._helpers, originalRequest)
             httpService = logEntry._originalrequestResponse.getHttpService()
+            
+            # Check if analytics URL
+            try:
+                urlString = str(self._extender._helpers.analyzeRequest(originalRequest).getUrl())
+                ANALYTICS_DOMAINS = ['bam.nr-data', 'aptrinsic', 'gainsight', 'newrelic', 'google-analytics']
+                
+                if any(domain in urlString.lower() for domain in ANALYTICS_DOMAINS):
+                    print("[Verb Swap] Skipping analytics URL: " + urlString[:80])
+                    skipped_count += 1
+                    continue
+            except:
+                pass
 
             # Test with each selected verb (except current verb)
             for new_verb in selected_verbs:
                 if new_verb != currentVerb:
-                    swappedRequest = swap_http_verb(
-                        self._extender._helpers,
-                        originalRequest,
-                        new_verb
-                    )
-                    
-                    newRequestResponse = IHttpRequestResponseImplementation(
-                        httpService,
-                        swappedRequest,
-                        None
-                    )
-                    
-                    from authorization.authorization import send_request_to_autorize
-                    send_request_to_autorize(self._extender, newRequestResponse)
-                    tested_count += 1
+                    try:
+                        swappedRequest = swap_http_verb(
+                            self._extender._helpers,
+                            originalRequest,
+                            new_verb
+                        )
+                        
+                        newRequestResponse = IHttpRequestResponseImplementation(
+                            httpService,
+                            swappedRequest,
+                            None
+                        )
+                        
+                        from authorization.authorization import send_request_to_autorize
+                        send_request_to_autorize(self._extender, newRequestResponse)
+                        tested_count += 1
+                    except Exception as e:
+                        print("[Verb Swap] Error testing verb " + new_verb + ": " + str(e))
 
-        self._extender.verbSwapStatusLabel.setText("Status: Completed! Tested %d verb variations" % tested_count)
+        print("[Verb Swap] ============================================================")
+        print("[Verb Swap] BATCH TEST COMPLETE")
+        print("[Verb Swap] Total requests: " + str(total_requests))
+        print("[Verb Swap] Skipped (analytics): " + str(skipped_count))
+        print("[Verb Swap] Tested: " + str(tested_count) + " verb variations")
+        print("[Verb Swap] ============================================================")
+        
+        self._extender.verbSwapStatusLabel.setText("Status: Completed! Tested %d verb variations (skipped %d analytics)" % (tested_count, skipped_count))
 
 
 class ClearVerbSwapAction(ActionListener):
@@ -243,6 +295,8 @@ class ClearVerbSwapAction(ActionListener):
         self._extender = extender
 
     def actionPerformed(self, event):
+        print("[Verb Swap] Clearing statistics...")
+        
         self._extender.verbSwapStats = {
             'total_tested': 0,
             'bypasses_found': 0,
@@ -252,11 +306,12 @@ class ClearVerbSwapAction(ActionListener):
             'status_500': 0,
             'status_other': 0
         }
+        
         # Update display
         stats = self._extender.verbSwapStats
         statsText = """
-Total Requests Tested:     0
-Bypasses Found:            0
+Total Verb Tests:          0
+Bypasses Found:            0  (0.0%)
         
 Status Code Breakdown:
   200 OK:                  0
@@ -264,6 +319,11 @@ Status Code Breakdown:
   401 Unauthorized:        0
   500 Server Error:        0
   Other:                   0
+
+Note: Statistics count EVERY verb test, not just bypasses.
+Check Output tab for detailed logs of each test!
 """
         self._extender.verbSwapStatsArea.setText(statsText)
         self._extender.verbSwapStatusLabel.setText("Status: Statistics cleared")
+        
+        print("[Verb Swap] Statistics cleared successfully")
