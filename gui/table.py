@@ -226,18 +226,18 @@ class TableModel(AbstractTableModel):
             return 0
 
     def getColumnCount(self):
-        return 9
+        return 14  # Changed from 9 to 14 (added 5 verb columns)
 
     def getColumnName(self, columnIndex):
         data = ['ID','Method', 'URL', 'Orig. Len', 'Modif. Len', "Unauth. Len",
-                "Authz. Status", "Unauth. Status", "Verb Bypasses"]
+                "Authz. Status", "Unauth. Status", "GET", "POST", "PUT", "DELETE", "PATCH", "Verb Bypasses"]
         try:
             return data[columnIndex]
         except IndexError:
             return ""
 
     def getColumnClass(self, columnIndex):
-        data = [Integer, String, String, Integer, Integer, Integer, String, String, String]
+        data = [Integer, String, String, Integer, Integer, Integer, String, String, String, String, String, String, String, String]
         try:
             return data[columnIndex]
         except IndexError:
@@ -268,6 +268,21 @@ class TableModel(AbstractTableModel):
         if columnIndex == 7:
             return logEntry._enfocementStatusUnauthorized
         if columnIndex == 8:
+            # GET status
+            return getattr(logEntry, '_getStatus', '')
+        if columnIndex == 9:
+            # POST status
+            return getattr(logEntry, '_postStatus', '')
+        if columnIndex == 10:
+            # PUT status
+            return getattr(logEntry, '_putStatus', '')
+        if columnIndex == 11:
+            # DELETE status
+            return getattr(logEntry, '_deleteStatus', '')
+        if columnIndex == 12:
+            # PATCH status
+            return getattr(logEntry, '_patchStatus', '')
+        if columnIndex == 13:
             if hasattr(logEntry, '_verbBypasses'):
                 return logEntry._verbBypasses
             else:
@@ -297,6 +312,7 @@ class Table(JTable):
     def prepareRenderer(self, renderer, row, col):
         comp = JTable.prepareRenderer(self, renderer, row, col)
         value = self._extender.tableModel.getValueAt(self._extender.logTable.convertRowIndexToModel(row), col)
+        
         if col == 6 or col == 7:
             if value == self._extender.BYPASSSED_STR:
                 comp.setBackground(Color(255, 153, 153))
@@ -307,8 +323,38 @@ class Table(JTable):
             elif value == self._extender.ENFORCED_STR:
                 comp.setBackground(Color(204, 255, 153))
                 comp.setForeground(Color.BLACK)
-        elif col == 8:
-            # Color code Verb Bypasses column
+        elif col >= 8 and col <= 12:
+            # Color code individual verb columns (GET, POST, PUT, DELETE, PATCH)
+            if value and value != '':
+                statusCode = str(value).strip()
+                # Extract numeric status code
+                if statusCode.startswith('HTTP'):
+                    parts = statusCode.split()
+                    if len(parts) >= 2:
+                        statusCode = parts[1]
+                
+                # Red for bypass (2xx success codes)
+                if statusCode.startswith('200') or statusCode.startswith('201') or statusCode.startswith('202') or statusCode.startswith('204'):
+                    comp.setBackground(Color(255, 100, 100))  # Red
+                    comp.setForeground(Color.WHITE)
+                # Green for secure (401, 403)
+                elif statusCode.startswith('401') or statusCode.startswith('403'):
+                    comp.setBackground(Color(144, 238, 144))  # Light green
+                    comp.setForeground(Color.BLACK)
+                # Yellow for errors (5xx)
+                elif statusCode.startswith('500') or statusCode.startswith('502') or statusCode.startswith('503') or statusCode.startswith('504'):
+                    comp.setBackground(Color(255, 255, 153))  # Yellow
+                    comp.setForeground(Color.BLACK)
+                # Default for other codes
+                else:
+                    comp.setBackground(Color.WHITE)
+                    comp.setForeground(Color.BLACK)
+            else:
+                # Gray for not tested
+                comp.setBackground(Color(220, 220, 220))  # Gray
+                comp.setForeground(Color(100, 100, 100))
+        elif col == 13:
+            # Color code Verb Bypasses column (summary)
             if value and value.startswith("🚨"):
                 comp.setBackground(Color(255, 100, 100))
                 comp.setForeground(Color.WHITE)
@@ -377,6 +423,12 @@ class LogEntry:
         self._unauthorizedRequestResponse = unauthorizedRequestResponse
         self._enfocementStatusUnauthorized = enforcementStatusUnauthorized
         self._verbBypasses = verbBypasses
+        # Initialize verb status codes
+        self._getStatus = ''
+        self._postStatus = ''
+        self._putStatus = ''
+        self._deleteStatus = ''
+        self._patchStatus = ''
         return
 
 class Mouseclick(MouseAdapter):
