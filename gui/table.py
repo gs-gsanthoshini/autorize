@@ -178,15 +178,25 @@ class TableModel(AbstractTableModel):
         if columnIndex == 7:
             return logEntry._enfocementStatusUnauthorized
         if columnIndex == 8:
-            return getattr(logEntry, '_getStatus', '')
+            # GET column - show "-" if empty (UPDATED)
+            status = getattr(logEntry, '_getStatus', '')
+            return status if status else '-'
         if columnIndex == 9:
-            return getattr(logEntry, '_postStatus', '')
+            # POST column - show "-" if empty (UPDATED)
+            status = getattr(logEntry, '_postStatus', '')
+            return status if status else '-'
         if columnIndex == 10:
-            return getattr(logEntry, '_putStatus', '')
+            # PUT column - show "-" if empty (UPDATED)
+            status = getattr(logEntry, '_putStatus', '')
+            return status if status else '-'
         if columnIndex == 11:
-            return getattr(logEntry, '_deleteStatus', '')
+            # DELETE column - show "-" if empty (UPDATED)
+            status = getattr(logEntry, '_deleteStatus', '')
+            return status if status else '-'
         if columnIndex == 12:
-            return getattr(logEntry, '_patchStatus', '')
+            # PATCH column - show "-" if empty (UPDATED)
+            status = getattr(logEntry, '_patchStatus', '')
+            return status if status else '-'
         if columnIndex == 13:
             if hasattr(logEntry, '_verbBypasses'):
                 return logEntry._verbBypasses
@@ -226,24 +236,38 @@ class Table(JTable):
             elif value == self._extender.ENFORCED_STR:
                 comp.setBackground(Color(204, 255, 153))
                 comp.setForeground(Color.BLACK)
+        
+        # UPDATED: Verb columns with gray "-" for empty values
         elif col >= 8 and col <= 12:
             if value and value != '':
                 statusCode = str(value).strip()
-                if statusCode.startswith('200') or statusCode.startswith('201') or statusCode.startswith('202') or statusCode.startswith('204'):
-                    comp.setBackground(Color(255, 100, 100))
+                
+                # If it's just a dash, show it in gray (UPDATED)
+                if statusCode == '-':
+                    comp.setBackground(Color(245, 245, 245))  # Very light gray background
+                    comp.setForeground(Color(160, 160, 160))  # Gray text
+                # Red for bypass (2xx success codes = VULNERABILITY!)
+                elif statusCode.startswith('200') or statusCode.startswith('201') or statusCode.startswith('202') or statusCode.startswith('204'):
+                    comp.setBackground(Color(255, 100, 100))  # Bright Red
                     comp.setForeground(Color.WHITE)
+                # Green for secure (401, 403 = properly blocked)
                 elif statusCode.startswith('401') or statusCode.startswith('403'):
-                    comp.setBackground(Color(144, 238, 144))
+                    comp.setBackground(Color(144, 238, 144))  # Light Green
                     comp.setForeground(Color.BLACK)
+                # Yellow for server errors (5xx)
                 elif statusCode.startswith('500') or statusCode.startswith('502') or statusCode.startswith('503') or statusCode.startswith('504'):
-                    comp.setBackground(Color(255, 255, 153))
+                    comp.setBackground(Color(255, 255, 153))  # Yellow
                     comp.setForeground(Color.BLACK)
+                # White for other status codes
                 else:
                     comp.setBackground(Color.WHITE)
                     comp.setForeground(Color.BLACK)
             else:
-                comp.setBackground(Color(220, 220, 220))
-                comp.setForeground(Color(100, 100, 100))
+                # Empty - show light gray (UPDATED)
+                comp.setBackground(Color(245, 245, 245))  # Very light gray
+                comp.setForeground(Color(160, 160, 160))  # Gray text
+        
+        # Color coding for Verb Bypasses summary column (13)
         elif col == 13:
             if value and value.startswith("🚨"):
                 comp.setBackground(Color(255, 100, 100))
@@ -254,10 +278,13 @@ class Table(JTable):
             else:
                 comp.setBackground(Color(255, 255, 200))
                 comp.setForeground(Color.BLACK)
+        
+        # Default coloring for other columns
         else:
             comp.setForeground(Color.BLACK)
             comp.setBackground(Color.WHITE)
 
+        # Highlight selected rows
         selectedRows = self._extender.logTable.getSelectedRows()
         if row in selectedRows:
             comp.setBackground(Color(201, 215, 255))
@@ -266,6 +293,7 @@ class Table(JTable):
         return comp
     
     def changeSelection(self, row, col, toggle, extend):
+        # show the log entry for the selected row
         logEntry = self._extender._log.get(self._extender.logTable.convertRowIndexToModel(row))
         self._extender._requestViewer.setMessage(logEntry._requestResponse.getRequest(), True)
         self._extender._responseViewer.setMessage(logEntry._requestResponse.getResponse(), False)
@@ -312,6 +340,7 @@ class LogEntry:
         self._unauthorizedRequestResponse = unauthorizedRequestResponse
         self._enfocementStatusUnauthorized = enforcementStatusUnauthorized
         self._verbBypasses = verbBypasses
+        # Initialize verb status codes
         self._getStatus = ''
         self._postStatus = ''
         self._putStatus = ''
