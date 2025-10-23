@@ -77,127 +77,36 @@ class TableFilter():
 
         layout.setHorizontalGroup(layout.createSequentialGroup()
             .addGroup(layout.createParallelGroup()
-                .addComponent(
-                    filterLModified,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showAuthBypassModified,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showAuthPotentiallyEnforcedModified,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showAuthEnforcedModified,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
+                .addComponent(filterLModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showAuthBypassModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showAuthPotentiallyEnforcedModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showAuthEnforcedModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
             )
             .addGroup(layout.createParallelGroup()
-                .addComponent(
-                    filterLUnauthenticated,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showAuthBypassUnauthenticated,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showAuthPotentiallyEnforcedUnauthenticated,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showAuthEnforcedUnauthenticated,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    self._extender.showDisabledUnauthenticated,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
+                .addComponent(filterLUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showAuthBypassUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showAuthPotentiallyEnforcedUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showAuthEnforcedUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(self._extender.showDisabledUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
             )
         )
         
-        
         layout.setVerticalGroup(layout.createSequentialGroup()
             .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                .addComponent(
-                    filterLModified,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
-                .addComponent(
-                    filterLUnauthenticated,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                    GroupLayout.PREFERRED_SIZE,
-                )
+                .addComponent(filterLModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                .addComponent(filterLUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
             )
             .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
                 .addGroup(layout.createSequentialGroup()
-                    .addComponent(
-                        self._extender.showAuthBypassModified,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
-                    .addComponent(
-                        self._extender.showAuthPotentiallyEnforcedModified,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
-                    .addComponent(
-                        self._extender.showAuthEnforcedModified,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
+                    .addComponent(self._extender.showAuthBypassModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addComponent(self._extender.showAuthPotentiallyEnforcedModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addComponent(self._extender.showAuthEnforcedModified, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
                 )
                 .addGroup(layout.createSequentialGroup()
-                    .addComponent(
-                        self._extender.showAuthBypassUnauthenticated,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
-                    .addComponent(
-                        self._extender.showAuthPotentiallyEnforcedUnauthenticated,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
-                    .addComponent(
-                        self._extender.showAuthEnforcedUnauthenticated,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
-                    .addComponent(
-                        self._extender.showDisabledUnauthenticated,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                        GroupLayout.PREFERRED_SIZE,
-                    )
+                    .addComponent(self._extender.showAuthBypassUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addComponent(self._extender.showAuthPotentiallyEnforcedUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addComponent(self._extender.showAuthEnforcedUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addComponent(self._extender.showDisabledUnauthenticated, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE, GroupLayout.PREFERRED_SIZE)
                 )
             )
         )
@@ -226,11 +135,9 @@ class TableModel(AbstractTableModel):
             return 0
 
     def getColumnCount(self):
-        # CHANGED: Added 5 new columns for verb status codes (GET, POST, PUT, DELETE, PATCH)
-        return 14  # Was 9, now 14
+        return 14
 
     def getColumnName(self, columnIndex):
-        # CHANGED: Added column names for GET, POST, PUT, DELETE, PATCH
         data = ['ID','Method', 'URL', 'Orig. Len', 'Modif. Len', "Unauth. Len",
                 "Authz. Status", "Unauth. Status", "GET", "POST", "PUT", "DELETE", "PATCH", "Verb Bypasses"]
         try:
@@ -239,7 +146,6 @@ class TableModel(AbstractTableModel):
             return ""
 
     def getColumnClass(self, columnIndex):
-        # CHANGED: Added String type for 5 new verb columns
         data = [Integer, String, String, Integer, Integer, Integer, String, String, 
                 String, String, String, String, String, String]
         try:
@@ -271,24 +177,17 @@ class TableModel(AbstractTableModel):
             return logEntry._enfocementStatus   
         if columnIndex == 7:
             return logEntry._enfocementStatusUnauthorized
-        # NEW: Columns 8-12 show individual verb status codes
         if columnIndex == 8:
-            # GET status
             return getattr(logEntry, '_getStatus', '')
         if columnIndex == 9:
-            # POST status
             return getattr(logEntry, '_postStatus', '')
         if columnIndex == 10:
-            # PUT status
             return getattr(logEntry, '_putStatus', '')
         if columnIndex == 11:
-            # DELETE status
             return getattr(logEntry, '_deleteStatus', '')
         if columnIndex == 12:
-            # PATCH status
             return getattr(logEntry, '_patchStatus', '')
         if columnIndex == 13:
-            # Verb Bypasses summary
             if hasattr(logEntry, '_verbBypasses'):
                 return logEntry._verbBypasses
             else:
@@ -296,7 +195,6 @@ class TableModel(AbstractTableModel):
         return ""
 
 class TableSelectionListener(ListSelectionListener):
-    """Class Responsible for the multi-row deletion"""
     def __init__(self, extender):
         self._extender = extender
 
@@ -312,14 +210,12 @@ class Table(JTable):
         self.addMouseListener(Mouseclick(self._extender))
         self.getColumnModel().getColumn(0).setPreferredWidth(450)
         self.setRowSelectionAllowed(True)
-        # Enables multi-row selection
         self.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
 
     def prepareRenderer(self, renderer, row, col):
         comp = JTable.prepareRenderer(self, renderer, row, col)
         value = self._extender.tableModel.getValueAt(self._extender.logTable.convertRowIndexToModel(row), col)
         
-        # Color coding for authorization status columns
         if col == 6 or col == 7:
             if value == self._extender.BYPASSSED_STR:
                 comp.setBackground(Color(255, 153, 153))
@@ -330,37 +226,24 @@ class Table(JTable):
             elif value == self._extender.ENFORCED_STR:
                 comp.setBackground(Color(204, 255, 153))
                 comp.setForeground(Color.BLACK)
-        
-        # NEW: Color coding for individual verb columns (8-12: GET, POST, PUT, DELETE, PATCH)
         elif col >= 8 and col <= 12:
             if value and value != '':
                 statusCode = str(value).strip()
-                
-                # Red for bypass (2xx success codes = VULNERABILITY!)
                 if statusCode.startswith('200') or statusCode.startswith('201') or statusCode.startswith('202') or statusCode.startswith('204'):
-                    comp.setBackground(Color(255, 100, 100))  # Bright Red
+                    comp.setBackground(Color(255, 100, 100))
                     comp.setForeground(Color.WHITE)
-                
-                # Green for secure (401, 403 = properly blocked)
                 elif statusCode.startswith('401') or statusCode.startswith('403'):
-                    comp.setBackground(Color(144, 238, 144))  # Light Green
+                    comp.setBackground(Color(144, 238, 144))
                     comp.setForeground(Color.BLACK)
-                
-                # Yellow for server errors (5xx)
                 elif statusCode.startswith('500') or statusCode.startswith('502') or statusCode.startswith('503') or statusCode.startswith('504'):
-                    comp.setBackground(Color(255, 255, 153))  # Yellow
+                    comp.setBackground(Color(255, 255, 153))
                     comp.setForeground(Color.BLACK)
-                
-                # White for other status codes
                 else:
                     comp.setBackground(Color.WHITE)
                     comp.setForeground(Color.BLACK)
             else:
-                # Gray for not tested/empty
-                comp.setBackground(Color(220, 220, 220))  # Light Gray
-                comp.setForeground(Color(100, 100, 100))  # Dark Gray text
-        
-        # Color coding for Verb Bypasses summary column (13)
+                comp.setBackground(Color(220, 220, 220))
+                comp.setForeground(Color(100, 100, 100))
         elif col == 13:
             if value and value.startswith("🚨"):
                 comp.setBackground(Color(255, 100, 100))
@@ -371,13 +254,10 @@ class Table(JTable):
             else:
                 comp.setBackground(Color(255, 255, 200))
                 comp.setForeground(Color.BLACK)
-        
-        # Default coloring for other columns
         else:
             comp.setForeground(Color.BLACK)
             comp.setBackground(Color.WHITE)
 
-        # Highlight selected rows
         selectedRows = self._extender.logTable.getSelectedRows()
         if row in selectedRows:
             comp.setBackground(Color(201, 215, 255))
@@ -386,7 +266,6 @@ class Table(JTable):
         return comp
     
     def changeSelection(self, row, col, toggle, extend):
-        # show the log entry for the selected row
         logEntry = self._extender._log.get(self._extender.logTable.convertRowIndexToModel(row))
         self._extender._requestViewer.setMessage(logEntry._requestResponse.getRequest(), True)
         self._extender._responseViewer.setMessage(logEntry._requestResponse.getResponse(), False)
@@ -433,8 +312,6 @@ class LogEntry:
         self._unauthorizedRequestResponse = unauthorizedRequestResponse
         self._enfocementStatusUnauthorized = enforcementStatusUnauthorized
         self._verbBypasses = verbBypasses
-        
-        # NEW: Initialize verb status code fields
         self._getStatus = ''
         self._postStatus = ''
         self._putStatus = ''
