@@ -135,11 +135,11 @@ class TableModel(AbstractTableModel):
             return 0
 
     def getColumnCount(self):
-        return 14
+        return 17
 
     def getColumnName(self, columnIndex):
         data = ['ID','Method', 'URL', 'Orig. Len', 'Modif. Len', "Unauth. Len",
-                "Authz. Status", "Unauth. Status", "GET", "POST", "PUT", "DELETE", "PATCH", "Verb Bypasses"]
+                "Authz. Status", "Unauth. Status", "GET", "POST", "PUT", "DELETE", "PATCH", "Verb Bypasses", "Similarity %", "Reason", "Confidence"]
         try:
             return data[columnIndex]
         except IndexError:
@@ -147,7 +147,7 @@ class TableModel(AbstractTableModel):
 
     def getColumnClass(self, columnIndex):
         data = [Integer, String, String, Integer, Integer, Integer, String, String, 
-                String, String, String, String, String, String]
+                String, String, String, String, String, String, Integer, String, String]
         try:
             return data[columnIndex]
         except IndexError:
@@ -178,23 +178,23 @@ class TableModel(AbstractTableModel):
         if columnIndex == 7:
             return logEntry._enfocementStatusUnauthorized
         if columnIndex == 8:
-            # GET column - show "-" if empty (UPDATED)
+            # GET column
             status = getattr(logEntry, '_getStatus', '')
             return status if status else '-'
         if columnIndex == 9:
-            # POST column - show "-" if empty (UPDATED)
+            # POST column
             status = getattr(logEntry, '_postStatus', '')
             return status if status else '-'
         if columnIndex == 10:
-            # PUT column - show "-" if empty (UPDATED)
+            # PUT column
             status = getattr(logEntry, '_putStatus', '')
             return status if status else '-'
         if columnIndex == 11:
-            # DELETE column - show "-" if empty (UPDATED)
+            # DELETE column
             status = getattr(logEntry, '_deleteStatus', '')
             return status if status else '-'
         if columnIndex == 12:
-            # PATCH column - show "-" if empty (UPDATED)
+            # PATCH column
             status = getattr(logEntry, '_patchStatus', '')
             return status if status else '-'
         if columnIndex == 13:
@@ -202,6 +202,24 @@ class TableModel(AbstractTableModel):
                 return logEntry._verbBypasses
             else:
                 return "Testing..."
+        if columnIndex == 14:
+            # Similarity % column
+            if hasattr(logEntry, '_similarity'):
+                return logEntry._similarity
+            else:
+                return 0
+        if columnIndex == 15:
+            # Reason column
+            if hasattr(logEntry, '_reason'):
+                return logEntry._reason
+            else:
+                return ""
+        if columnIndex == 16:
+            # Confidence column
+            if hasattr(logEntry, '_confidence'):
+                return logEntry._confidence
+            else:
+                return ""
         return ""
 
 class TableSelectionListener(ListSelectionListener):
@@ -237,35 +255,35 @@ class Table(JTable):
                 comp.setBackground(Color(204, 255, 153))
                 comp.setForeground(Color.BLACK)
         
-        # UPDATED: Verb columns with gray "-" for empty values
+        # Verb columns with gray "-" for empty values
         elif col >= 8 and col <= 12:
             if value and value != '':
                 statusCode = str(value).strip()
                 
-                # If it's just a dash, show it in gray (UPDATED)
+                # If it's just a dash, show it in gray
                 if statusCode == '-':
-                    comp.setBackground(Color(245, 245, 245))  # Very light gray background
-                    comp.setForeground(Color(160, 160, 160))  # Gray text
+                    comp.setBackground(Color(245, 245, 245))
+                    comp.setForeground(Color(160, 160, 160))
                 # Red for bypass (2xx success codes = VULNERABILITY!)
                 elif statusCode.startswith('200') or statusCode.startswith('201') or statusCode.startswith('202') or statusCode.startswith('204'):
-                    comp.setBackground(Color(255, 100, 100))  # Bright Red
+                    comp.setBackground(Color(255, 100, 100))
                     comp.setForeground(Color.WHITE)
                 # Green for secure (401, 403 = properly blocked)
                 elif statusCode.startswith('401') or statusCode.startswith('403'):
-                    comp.setBackground(Color(144, 238, 144))  # Light Green
+                    comp.setBackground(Color(144, 238, 144))
                     comp.setForeground(Color.BLACK)
                 # Yellow for server errors (5xx)
                 elif statusCode.startswith('500') or statusCode.startswith('502') or statusCode.startswith('503') or statusCode.startswith('504'):
-                    comp.setBackground(Color(255, 255, 153))  # Yellow
+                    comp.setBackground(Color(255, 255, 153))
                     comp.setForeground(Color.BLACK)
                 # White for other status codes
                 else:
                     comp.setBackground(Color.WHITE)
                     comp.setForeground(Color.BLACK)
             else:
-                # Empty - show light gray (UPDATED)
-                comp.setBackground(Color(245, 245, 245))  # Very light gray
-                comp.setForeground(Color(160, 160, 160))  # Gray text
+                # Empty - show light gray
+                comp.setBackground(Color(245, 245, 245))
+                comp.setForeground(Color(160, 160, 160))
         
         # Color coding for Verb Bypasses summary column (13)
         elif col == 13:
@@ -277,6 +295,30 @@ class Table(JTable):
                 comp.setForeground(Color.BLACK)
             else:
                 comp.setBackground(Color(255, 255, 200))
+                comp.setForeground(Color.BLACK)
+        
+        # Color coding for Similarity % column (14)
+        elif col == 14:
+            if value >= 80:
+                comp.setBackground(Color(255, 100, 100))  # Red - High similarity = Bypass
+                comp.setForeground(Color.WHITE)
+            elif value >= 50:
+                comp.setBackground(Color(255, 200, 100))  # Orange - Medium
+                comp.setForeground(Color.BLACK)
+            else:
+                comp.setBackground(Color(200, 255, 200))  # Green - Low similarity = Enforced
+                comp.setForeground(Color.BLACK)
+        
+        # Color coding for Confidence column (16)
+        elif col == 16:
+            if value == "HIGH":
+                comp.setBackground(Color(200, 255, 200))  # Green
+                comp.setForeground(Color.BLACK)
+            elif value == "MEDIUM":
+                comp.setBackground(Color(255, 255, 153))  # Yellow
+                comp.setForeground(Color.BLACK)
+            else:
+                comp.setBackground(Color.WHITE)
                 comp.setForeground(Color.BLACK)
         
         # Default coloring for other columns
@@ -330,7 +372,7 @@ class Table(JTable):
         return
 
 class LogEntry:
-    def __init__(self, id, requestResponse, method, url, originalrequestResponse, enforcementStatus, unauthorizedRequestResponse, enforcementStatusUnauthorized, verbBypasses="Testing..."):
+    def __init__(self, id, requestResponse, method, url, originalrequestResponse, enforcementStatus, unauthorizedRequestResponse, enforcementStatusUnauthorized, similarity=0, reason="", confidence="", verbBypasses="Testing..."):
         self._id = id
         self._requestResponse = requestResponse
         self._originalrequestResponse = originalrequestResponse
@@ -340,6 +382,10 @@ class LogEntry:
         self._unauthorizedRequestResponse = unauthorizedRequestResponse
         self._enfocementStatusUnauthorized = enforcementStatusUnauthorized
         self._verbBypasses = verbBypasses
+        # NEW: Add similarity, reason, and confidence
+        self._similarity = similarity
+        self._reason = reason
+        self._confidence = confidence
         # Initialize verb status codes
         self._getStatus = ''
         self._postStatus = ''
