@@ -178,23 +178,18 @@ class TableModel(AbstractTableModel):
         if columnIndex == 7:
             return logEntry._enfocementStatusUnauthorized
         if columnIndex == 8:
-            # GET column
             status = getattr(logEntry, '_getStatus', '')
             return status if status else '-'
         if columnIndex == 9:
-            # POST column
             status = getattr(logEntry, '_postStatus', '')
             return status if status else '-'
         if columnIndex == 10:
-            # PUT column
             status = getattr(logEntry, '_putStatus', '')
             return status if status else '-'
         if columnIndex == 11:
-            # DELETE column
             status = getattr(logEntry, '_deleteStatus', '')
             return status if status else '-'
         if columnIndex == 12:
-            # PATCH column
             status = getattr(logEntry, '_patchStatus', '')
             return status if status else '-'
         if columnIndex == 13:
@@ -203,19 +198,16 @@ class TableModel(AbstractTableModel):
             else:
                 return "Testing..."
         if columnIndex == 14:
-            # Similarity % column
             if hasattr(logEntry, '_similarity'):
                 return logEntry._similarity
             else:
                 return 0
         if columnIndex == 15:
-            # Reason column
             if hasattr(logEntry, '_reason'):
                 return logEntry._reason
             else:
                 return ""
         if columnIndex == 16:
-            # Confidence column
             if hasattr(logEntry, '_confidence'):
                 return logEntry._confidence
             else:
@@ -255,37 +247,31 @@ class Table(JTable):
                 comp.setBackground(Color(204, 255, 153))
                 comp.setForeground(Color.BLACK)
         
-        # Verb columns with gray "-" for empty values
+        # Verb columns (8-12)
         elif col >= 8 and col <= 12:
             if value and value != '':
                 statusCode = str(value).strip()
                 
-                # If it's just a dash, show it in gray
                 if statusCode == '-':
                     comp.setBackground(Color(245, 245, 245))
                     comp.setForeground(Color(160, 160, 160))
-                # Red for bypass (2xx success codes = VULNERABILITY!)
                 elif statusCode.startswith('200') or statusCode.startswith('201') or statusCode.startswith('202') or statusCode.startswith('204'):
                     comp.setBackground(Color(255, 100, 100))
                     comp.setForeground(Color.WHITE)
-                # Green for secure (401, 403 = properly blocked)
                 elif statusCode.startswith('401') or statusCode.startswith('403'):
                     comp.setBackground(Color(144, 238, 144))
                     comp.setForeground(Color.BLACK)
-                # Yellow for server errors (5xx)
                 elif statusCode.startswith('500') or statusCode.startswith('502') or statusCode.startswith('503') or statusCode.startswith('504'):
                     comp.setBackground(Color(255, 255, 153))
                     comp.setForeground(Color.BLACK)
-                # White for other status codes
                 else:
                     comp.setBackground(Color.WHITE)
                     comp.setForeground(Color.BLACK)
             else:
-                # Empty - show light gray
                 comp.setBackground(Color(245, 245, 245))
                 comp.setForeground(Color(160, 160, 160))
         
-        # Color coding for Verb Bypasses summary column (13)
+        # Verb Bypasses column (13)
         elif col == 13:
             if value and value.startswith("🚨"):
                 comp.setBackground(Color(255, 100, 100))
@@ -297,25 +283,44 @@ class Table(JTable):
                 comp.setBackground(Color(255, 255, 200))
                 comp.setForeground(Color.BLACK)
         
-        # Color coding for Similarity % column (14)
+        # Similarity % column (14) - Enhanced colors
         elif col == 14:
-            if value >= 80:
-                comp.setBackground(Color(255, 100, 100))  # Red - High similarity = Bypass
+            if value >= 95:
+                comp.setBackground(Color(139, 0, 0))  # Dark Red - CRITICAL
                 comp.setForeground(Color.WHITE)
+            elif value >= 80:
+                comp.setBackground(Color(255, 69, 0))  # Red-Orange - HIGH
+                comp.setForeground(Color.WHITE)
+            elif value >= 65:
+                comp.setBackground(Color(255, 165, 0))  # Orange - MEDIUM
+                comp.setForeground(Color.BLACK)
             elif value >= 50:
-                comp.setBackground(Color(255, 200, 100))  # Orange - Medium
+                comp.setBackground(Color(255, 215, 0))  # Gold - LOW
                 comp.setForeground(Color.BLACK)
             else:
-                comp.setBackground(Color(200, 255, 200))  # Green - Low similarity = Enforced
+                comp.setBackground(Color(144, 238, 144))  # Light Green - SECURE
                 comp.setForeground(Color.BLACK)
         
-        # Color coding for Confidence column (16)
+        # Confidence column (16) - Enhanced with 5 levels
         elif col == 16:
-            if value == "HIGH":
-                comp.setBackground(Color(200, 255, 200))  # Green
+            value_str = str(value).upper()
+            if "CRITICAL" in value_str:
+                comp.setBackground(Color(139, 0, 0))  # Dark Red
+                comp.setForeground(Color.WHITE)
+            elif "HIGH" in value_str:
+                comp.setBackground(Color(255, 69, 0))  # Red-Orange
+                comp.setForeground(Color.WHITE)
+            elif "MEDIUM" in value_str:
+                comp.setBackground(Color(255, 165, 0))  # Orange
                 comp.setForeground(Color.BLACK)
-            elif value == "MEDIUM":
-                comp.setBackground(Color(255, 255, 153))  # Yellow
+            elif "LOW" in value_str:
+                comp.setBackground(Color(255, 215, 0))  # Gold
+                comp.setForeground(Color.BLACK)
+            elif "SECURE" in value_str:
+                comp.setBackground(Color(144, 238, 144))  # Light Green
+                comp.setForeground(Color.BLACK)
+            elif "ERROR" in value_str:
+                comp.setBackground(Color(255, 255, 200))  # Light Yellow
                 comp.setForeground(Color.BLACK)
             else:
                 comp.setBackground(Color.WHITE)
@@ -335,7 +340,6 @@ class Table(JTable):
         return comp
     
     def changeSelection(self, row, col, toggle, extend):
-        # show the log entry for the selected row
         logEntry = self._extender._log.get(self._extender.logTable.convertRowIndexToModel(row))
         self._extender._requestViewer.setMessage(logEntry._requestResponse.getRequest(), True)
         self._extender._responseViewer.setMessage(logEntry._requestResponse.getResponse(), False)
@@ -382,11 +386,9 @@ class LogEntry:
         self._unauthorizedRequestResponse = unauthorizedRequestResponse
         self._enfocementStatusUnauthorized = enforcementStatusUnauthorized
         self._verbBypasses = verbBypasses
-        # NEW: Add similarity, reason, and confidence
         self._similarity = similarity
         self._reason = reason
         self._confidence = confidence
-        # Initialize verb status codes
         self._getStatus = ''
         self._postStatus = ''
         self._putStatus = ''
