@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """
-Response Analyzer for Autorize
-Implements fully automatic two-check system to reduce false positives
-No manual review needed - code decides everything automatically
+Response Analyzer for Autorize - IMPROVED VERSION
+Clear confidence levels: CRITICAL, HIGH RISK, MEDIUM, LOW, SECURE
 """
 
 import re
@@ -12,7 +11,6 @@ from difflib import SequenceMatcher
 
 class ResponseAnalyzer:
     
-    # Error keywords that indicate authorization is enforced
     ERROR_KEYWORDS = [
         "unauthorized", "forbidden", "access denied",
         "not allowed", "permission denied", "not authorized",
@@ -30,67 +28,108 @@ class ResponseAnalyzer:
         Main analysis function - implements 2-check system
         Returns: dict with status, confidence, reason, similarity
         """
-        # Extract status codes
         original_status = self._get_status_code(original_response)
         modified_status = self._get_status_code(modified_response)
         
-        # CHECK 1: Status Code Analysis (Fast Check)
-        if modified_status in [401, 403, 404, 500, 503]:
+        # CHECK 1: Status Code Analysis
+        # 401, 403, 404 = Access Blocked = SECURE!
+        if modified_status in [401, 403, 404]:
             return {
                 'status': 'ENFORCED',
-                'confidence': 'HIGH',
-                'reason': 'Modified returned {} - Access blocked'.format(modified_status),
+                'confidence': 'SECURE',
+                'reason': 'Blocked with {} - Authorization working'.format(modified_status),
                 'similarity': 0,
                 'original_status': original_status,
                 'modified_status': modified_status
             }
         
-        # Both returned success codes
+        # 500, 503 = Server Error (could be blocking, but unclear)
+        if modified_status in [500, 503]:
+            return {
+                'status': 'ENFORCED',
+                'confidence': 'ERROR',
+                'reason': 'Server error {} - Might be blocking'.format(modified_status),
+                'similarity': 0,
+                'original_status': original_status,
+                'modified_status': modified_status
+            }
+        
+        # Both returned success codes (200, 201, 204)
         if modified_status in [200, 201, 204] and original_status in [200, 201, 204]:
             
             # CHECK 2: Calculate Response Similarity
             similarity = self._calculate_similarity(original_response, modified_response)
             
-            # High Similarity (>= 80%) = Clear Bypass
-            if similarity >= 80:
+            # CRITICAL: 95-100% Similar = Definite Bypass!
+            if similarity >= 95:
                 return {
                     'status': 'BYPASSED',
-                    'confidence': 'HIGH',
-                    'reason': 'Both returned {}; {}% similar content'.format(modified_status, similarity),
+                    'confidence': 'CRITICAL',
+                    'reason': 'CRITICAL: {}% identical responses'.format(similarity),
                     'similarity': similarity,
                     'original_status': original_status,
                     'modified_status': modified_status
                 }
             
-            # Medium Similarity (50-79%) - Check for error keywords
-            elif similarity >= 50:
-                # CHECK 3: Automatic Keyword Detection
+            # HIGH RISK: 80-94% Similar = Very Likely Bypass
+            elif similarity >= 80:
+                return {
+                    'status': 'BYPASSED',
+                    'confidence': 'HIGH RISK',
+                    'reason': 'HIGH: {}% similar - Likely bypass'.format(similarity),
+                    'similarity': similarity,
+                    'original_status': original_status,
+                    'modified_status': modified_status
+                }
+            
+            # MEDIUM: 65-79% Similar = Suspicious
+            elif similarity >= 65:
                 if self._has_error_keywords(modified_response):
                     return {
                         'status': 'ENFORCED',
-                        'confidence': 'HIGH',
+                        'confidence': 'SECURE',
                         'reason': 'Error keywords found; {}% similar'.format(similarity),
                         'similarity': similarity,
                         'original_status': original_status,
                         'modified_status': modified_status
                     }
                 else:
-                    # No error keywords, still similar = Suspicious Bypass
                     return {
                         'status': 'BYPASSED',
                         'confidence': 'MEDIUM',
-                        'reason': 'Both returned {}; {}% similar; No blocking detected'.format(modified_status, similarity),
+                        'reason': 'MEDIUM: {}% similar - Suspicious'.format(similarity),
                         'similarity': similarity,
                         'original_status': original_status,
                         'modified_status': modified_status
                     }
             
-            # Low Similarity (< 50%) = Different responses = Enforced
+            # LOW: 50-64% Similar = Needs Review
+            elif similarity >= 50:
+                if self._has_error_keywords(modified_response):
+                    return {
+                        'status': 'ENFORCED',
+                        'confidence': 'SECURE',
+                        'reason': 'Error keywords found; {}% similar'.format(similarity),
+                        'similarity': similarity,
+                        'original_status': original_status,
+                        'modified_status': modified_status
+                    }
+                else:
+                    return {
+                        'status': 'BYPASSED',
+                        'confidence': 'LOW',
+                        'reason': 'LOW: {}% similar - Needs review'.format(similarity),
+                        'similarity': similarity,
+                        'original_status': original_status,
+                        'modified_status': modified_status
+                    }
+            
+            # Less than 50% similar = Different responses = Secure
             else:
                 return {
                     'status': 'ENFORCED',
-                    'confidence': 'HIGH',
-                    'reason': 'Only {}% similar - Different responses'.format(similarity),
+                    'confidence': 'SECURE',
+                    'reason': 'Only {}% similar - Properly blocked'.format(similarity),
                     'similarity': similarity,
                     'original_status': original_status,
                     'modified_status': modified_status
@@ -99,8 +138,8 @@ class ResponseAnalyzer:
         # Different status codes = Enforced
         return {
             'status': 'ENFORCED',
-            'confidence': 'HIGH',
-            'reason': 'Status codes differ ({} vs {})'.format(original_status, modified_status),
+            'confidence': 'SECURE',
+            'reason': 'Different status codes ({} vs {})'.format(original_status, modified_status),
             'similarity': 0,
             'original_status': original_status,
             'modified_status': modified_status
@@ -112,7 +151,6 @@ class ResponseAnalyzer:
             if response:
                 response_info = self._helpers.analyzeResponse(response.getResponse())
                 status_line = str(response_info.getHeaders()[0])
-                # Extract status code (e.g., "HTTP/1.1 200 OK" -> 200)
                 match = re.search(r'\s(\d{3})\s', status_line)
                 if match:
                     return int(match.group(1))
@@ -121,20 +159,14 @@ class ResponseAnalyzer:
             return 0
     
     def _calculate_similarity(self, original_response, modified_response):
-        """
-        Calculate similarity percentage between two responses
-        Returns: 0-100 (percentage)
-        """
+        """Calculate similarity percentage between two responses"""
         try:
-            # Get response bodies
             original_body = self._get_response_body(original_response)
             modified_body = self._get_response_body(modified_response)
             
-            # Remove dynamic content before comparison
             original_clean = self._remove_dynamic_content(original_body)
             modified_clean = self._remove_dynamic_content(modified_body)
             
-            # Calculate similarity using SequenceMatcher
             similarity = SequenceMatcher(None, original_clean, modified_clean).ratio()
             
             return int(similarity * 100)
@@ -155,25 +187,15 @@ class ResponseAnalyzer:
             return ""
     
     def _remove_dynamic_content(self, content):
-        """
-        Remove dynamic content that changes between requests
-        (timestamps, tokens, session IDs, etc.)
-        """
+        """Remove dynamic content that changes between requests"""
         if not content:
             return ""
         
         try:
-            # Remove timestamps (various formats)
             content = re.sub(r'\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}', 'TIMESTAMP', content)
-            content = re.sub(r'\d{10,13}', 'TIMESTAMP', content)  # Unix timestamps
-            
-            # Remove UUIDs
+            content = re.sub(r'\d{10,13}', 'TIMESTAMP', content)
             content = re.sub(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', 'UUID', content, flags=re.IGNORECASE)
-            
-            # Remove session tokens (common patterns)
             content = re.sub(r'(session|token|csrf|nonce)["\s:=]+[a-zA-Z0-9+/=]{20,}', 'TOKEN', content, flags=re.IGNORECASE)
-            
-            # Remove JWTs
             content = re.sub(r'eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+', 'JWT', content)
             
             return content
@@ -181,10 +203,7 @@ class ResponseAnalyzer:
             return content
     
     def _has_error_keywords(self, response):
-        """
-        Check if response contains error keywords indicating access is blocked
-        Returns: True if error keywords found
-        """
+        """Check if response contains error keywords"""
         try:
             body = self._get_response_body(response).lower()
             
