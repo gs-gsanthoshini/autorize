@@ -11,6 +11,7 @@ if (sys.version_info[0] == 2):
 sys.path.append("..")
 
 from helpers.http import get_authorization_header_from_message, get_cookie_header_from_message, isStatusCodesReturned, makeMessage, makeRequest, getResponseBody, IHttpRequestResponseImplementation
+from helpers.response_analyzer import ResponseAnalyzer
 from gui.table import LogEntry, UpdateTableEDT
 from javax.swing import SwingUtilities
 from java.net import URL
@@ -268,19 +269,35 @@ def auth_enforced_via_enforcement_detectors(self, filters, requestResponse, andO
     return auth_enforced
 
 def checkBypass(self, oldStatusCode, newStatusCode, oldContent,
-                 newContent, filters, requestResponse, andOrEnforcement):
-    if oldStatusCode == newStatusCode:
-        auth_enforced = 0
-        if len(filters) > 0:
-            auth_enforced = auth_enforced_via_enforcement_detectors(self, filters, requestResponse, andOrEnforcement)
-        if auth_enforced:
-            return self.ENFORCED_STR
-        elif oldContent == newContent:
-            return self.BYPASSSED_STR
-        else:
-            return self.IS_ENFORCED_STR
+                 newContent, filters, requestResponse, originalRequestResponse, andOrEnforcement):
+    # Initialize response analyzer if not exists
+    if not hasattr(self, '_response_analyzer'):
+        self._response_analyzer = ResponseAnalyzer(self._helpers)
+    
+    # Use 2-check system to analyze authorization
+    analysis_result = self._response_analyzer.analyze_authorization(
+        originalRequestResponse,
+        requestResponse
+    )
+    
+    # Get similarity percentage and reason
+    similarity = analysis_result['similarity']
+    reason = analysis_result['reason']
+    confidence = analysis_result['confidence']
+    
+    # Log to console for debugging
+    print("\n[Autorize Analysis] ==========================================")
+    print("[Autorize Analysis] Status: " + analysis_result['status'])
+    print("[Autorize Analysis] Confidence: " + confidence)
+    print("[Autorize Analysis] Similarity: " + str(similarity) + "%")
+    print("[Autorize Analysis] Reason: " + reason)
+    print("[Autorize Analysis] ==========================================\n")
+    
+    # Return tuple with all information
+    if analysis_result['status'] == 'BYPASSED':
+        return (self.BYPASSSED_STR, similarity, reason, confidence)
     else:
-        return self.ENFORCED_STR
+        return (self.ENFORCED_STR, similarity, reason, confidence)
 
 def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
     if checkUnauthorized:
@@ -303,11 +320,12 @@ def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
 
     EDFilters = self.EDModel.toArray()
 
-    impression = checkBypass(self, oldStatusCode, newStatusCode, oldContent, newContent, EDFilters, requestResponse, self.AndOrType.getSelectedItem())
+    # Get analysis results (returns tuple: impression, similarity, reason, confidence)
+    impression, similarity, reason, confidence = checkBypass(self, oldStatusCode, newStatusCode, oldContent, newContent, EDFilters, requestResponse, messageInfo, self.AndOrType.getSelectedItem())
 
     if checkUnauthorized:
         EDFiltersUnauth = self.EDModelUnauth.toArray()
-        impressionUnauthorized = checkBypass(self, oldStatusCode, statusCodeUnauthorized, oldContent, contentUnauthorized, EDFiltersUnauth, requestResponseUnauthorized, self.AndOrTypeUnauth.getSelectedItem())
+        impressionUnauthorized, similarityUnauth, reasonUnauth, confidenceUnauth = checkBypass(self, oldStatusCode, statusCodeUnauthorized, oldContent, contentUnauthorized, EDFiltersUnauth, requestResponseUnauthorized, messageInfo, self.AndOrTypeUnauth.getSelectedItem())
 
     self._lock.acquire()
 
@@ -315,9 +333,9 @@ def checkAuthorization(self, messageInfo, originalHeaders, checkUnauthorized):
     method = self._helpers.analyzeRequest(messageInfo.getRequest()).getMethod()
 
     if checkUnauthorized:
-        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,self._callbacks.saveBuffersToTempFiles(requestResponseUnauthorized),impressionUnauthorized))
+        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,requestResponseUnauthorized,impressionUnauthorized, similarity, reason, confidence))
     else:
-        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,None,"Disabled"))
+        self._log.add(LogEntry(self.currentRequestNumber,self._callbacks.saveBuffersToTempFiles(requestResponse), method, self._helpers.analyzeRequest(requestResponse).getUrl(),messageInfo,impression,None,"", similarity, reason, confidence))
 
     SwingUtilities.invokeLater(UpdateTableEDT(self,"insert",row,row))
     self.currentRequestNumber = self.currentRequestNumber + 1
